@@ -1,4 +1,6 @@
 import re
+
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import logout
 from django.shortcuts import render,redirect
@@ -6,6 +8,7 @@ from django.http import HttpResponse, HttpResponseForbidden,JsonResponse
 from django.contrib.auth import login, authenticate
 from django.db import DatabaseError
 from django_redis import get_redis_connection
+
 
 from meiduo_mall.utils.response_code import RETCODE
 from .models import *
@@ -68,6 +71,7 @@ class LoginView(View):
     def get(self,request):
         return render(request,'/login.html/')
     def post(self,request):
+        print('aa')
         username=request.POST.get('username')
         password=request.POST.get('password')
         remembered=request.POST.get('remembered')
@@ -78,18 +82,22 @@ class LoginView(View):
             request.session.set_expiry(0)
         next=request.GET.get('next')
         login(request,user)
+        print('ok')
         response=redirect(next or '/')
-        response.set_cookie('username',username)
+        response.set_cookie('username',user.username,max_age=(None if remembered is None else settings.SESSION_COOKIE_AGE))
         return response
 class LogoutView(View):
     def get(self,request):
         logout(request)
-        response=render(request,'/login/')
+        response=redirect('/login/')
         response.delete_cookie('username')
         return response
 class InfoView(LoginRequiredMixin,View):
     def get(self,request):
         return render(request,'user_center_info.html')
+
+class QQLoginView(View):
+    pass
 
 
 
