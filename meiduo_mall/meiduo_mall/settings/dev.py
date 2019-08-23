@@ -43,7 +43,10 @@ INSTALLED_APPS = [
     'contents.apps.ContentsConfig',
     'oauth.apps.OauthConfig',
     'areas.apps.AreasConfig',
-    'goods.apps.GoodsConfig'
+    'goods.apps.GoodsConfig',
+    'carts.apps.CartsConfig',
+    'haystack',
+    'orders.apps.OrdersConfig'
 ]
 
 MIDDLEWARE = [
@@ -113,6 +116,20 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     },
+    "history": { # 用户浏览记录
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/3",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    },
+    "carts": { # 用户浏览记录
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://127.0.0.1:6379/4",
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            }
+        },
 }
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "session"
@@ -211,3 +228,19 @@ EMAIL_HOST_PASSWORD = 'python99'  # 邮箱授权时获得的密码，非注册�
 EMAIL_FROM = '美多商城<itcast99@163.com>'  # 发件人抬头
 
 EMAIL_VERIFY_URL = 'http://www.meiduo.site:8000/emails/verification/'
+DEFAULT_FILE_STORAGE = 'meiduo_mall.utils.views.FastDFSStorage'
+FDFS_BASE_URL = 'http://image.meiduo.site:8888/'
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'URL': 'http://192.168.202.131:9200/', # Elasticsearch服务器ip地址，端口号固定为9200
+        'INDEX_NAME': 'meiduo_mall', # Elasticsearch建立的索引库的名称
+    },
+}
+
+# 当添加、修改、删除数据时，自动生成索引
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
+'''微博登录常量'''
+WEIBO_APP_ID = "3422135650"
+WEIBO_APP_KEY = "ceba3449edbadb46737fe35479634ad1"
+WEIBO_REDIRECT_URI = "http://www.meiduo.site:8000/weibo"

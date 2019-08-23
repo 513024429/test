@@ -1,13 +1,17 @@
 import json
 import re
+
+from django.db.models import F, Q
 from django.urls import reverse
+
+from carts.utils import merge_cart_cookie_to_redis
 from celery_tasks.email.tasks import send_verify_url
 from django.conf import settings
 from django.contrib.auth import mixins
 from django.contrib.auth.views import logout
 from django.shortcuts import render,redirect
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, HttpResponseServerError, \
-    HttpResponseBadRequest
+    HttpResponseBadRequest, HttpResponseNotFound
 from django.contrib.auth import login, authenticate
 from django.db import DatabaseError
 from django_redis import get_redis_connection
@@ -85,6 +89,7 @@ class LoginView(View):
         print('ok')
         response=redirect(next or '/')
         response.set_cookie('username',user.username,max_age=(None if remembered is None else settings.SESSION_COOKIE_AGE))
+        merge_cart_cookie_to_redis(request=request, response=response)
         return response
 class LogoutView(View):
     def get(self,request):
@@ -345,6 +350,93 @@ class ChangePasswordView(LoginRequiredView):
         response = redirect(reverse('users:login'))
         response.delete_cookie('username')
         return response
+class FindPasswdView(View):
+    #找回密码页面
+    def get(self,request):
+        return render(request,'find_password.html')
+class SmsToken(View):
+    def get(self,request,username):
+        uuid=request.GET.get('image_code_id')
+        image_code_client=request.GET.get('text')
+        if not uuid:
+            return HttpResponseBadRequest('验证错误')
+        redis_conn = get_redis_connection('verify_code')
+        # 提取图形验证码
+        image_code_server = redis_conn.get('img_%s' % uuid)
+        if image_code_server is None:
+            # 图形验证码过期或者不存在
+            return HttpResponseBadRequest('图形验证码过期或者不存在')
+
+        # 删除图形验证码，避免恶意测试图形验证码
+        redis_conn.delete('img_%s' % uuid)
+
+        # 对比图形验证码
+        image_code_server = image_code_server.decode()  # bytes转字符串
+        if image_code_client.lower() != image_code_server.lower():  # 转小写后比较
+            return HttpResponseBadRequest('图形验证码有误')
+
+        try:
+            user=User.objects.get(Q(username=username) | Q(mobile=username))
+        except User.DoesNotExist:
+            return HttpResponseNotFound('用户名不存在')
+
+        data={'mobile':user.mobile,
+              'access_token':user.password}
+        response = JsonResponse(data)
+        response.set_cookie('access_token',user.password,3600)
+        return response
+class CheckMobile(View):
+    def get(self,request,username):
+        access_token=request.COOKIES.get('access_token')
+        if not access_token:
+            return JsonResponse({'error': '数据错误'}, status=400)
+        try:
+            username=User.objects.get(Q(username=username) | Q(mobile=username))
+        except User.DoesNotExist:
+            return JsonResponse({'error':'数据错误'}, status = 400)
+        data={'code':RETCODE.OK,
+              'user_id':username.id,
+              'access_token':access_token}
+        return JsonResponse(data)
+class SendMessageView(View):
+    def get(self,request):
+        access_token=request.GET.get('access_token')
+        cookie_token=request.COOKIES.get('access_token')
+        if not all([access_token,cookie_token]):
+            return HttpResponseForbidden('参数不能为空')
+        if access_token!=cookie_token:
+            return HttpResponseForbidden('参数错误')
+        return JsonResponse({'message':'OK'})
+class FindChangePasswdView(View):
+    def post(self,request,username):
+        json_dict=json.loads(request.body.decode())
+        password=json_dict.get('password')
+        password2=json_dict.get('password2')
+        access_token=json_dict.get('access_token')
+        cookie_token = request.COOKIES.get('access_token')
+        if all([password,password2,access_token,cookie_token]):
+            return HttpResponseForbidden('参数不能为空')
+        if password!=password2:
+            return HttpResponseForbidden('密码不一致')
+        if access_token!=cookie_token:
+            return HttpResponseForbidden('token失效')
+        try:
+            user=User.objects.get(Q(username=username) | Q(mobile=username))
+        except DatabaseError:
+            return HttpResponseForbidden('用户不存在')
+        try:
+            user.password=password
+            user.save()
+        except Exception:
+            return HttpResponseForbidden('保存失败')
+        return JsonResponse({'message':'OK'})
+
+
+
+
+
+
+
 
 
 

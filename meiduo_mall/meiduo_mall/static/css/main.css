@@ -679,6 +679,7 @@ html,body{height:100%}
 .qq_login,.weixin_login,.register_btn{float:left;line-height:30px;margin-left:15px;margin-top:7px;color:#666;font-size:12px;text-indent:22px;background:url(../images/QQ-weixin.png) left 7px no-repeat;}
 .qq_login:hover,.weixin_login:hover,.register_btn:hover{color:#e3101e;text-decoration:underline}
 .weixin_login{background-position:left -35px;}
+.weibo_login{background: url("../images/weibo.png")}
 .register_btn{background:url(../images/icons02.png) left 9px no-repeat;float:right;margin-right:15px}
 
 .name_input,.pass_input{width:306px;height:36px;border:1px solid #e0e0e0;background:url(../images/icons02.png) 280px -41px no-repeat #f8f8f8;outline:none;font-size:14px;text-indent:10px;position: absolute;left:0;top:0}

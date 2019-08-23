@@ -40,6 +40,19 @@ var vm = new Vue({
 				window.event.returnValue = false
             }
         },
+        weibo_login: function(){
+            var next = get_query_string('next') || '/';
+            var url=this.host+'/weibo/authorization/?next=' + next;
+            axios.get(url,{
+                responseType:'json'
+                })
+                .then(response => {
+                    location.href=response.data.login_url;
+                })
+               .catch(error => {
+                    console.log(error.response);
+                })
+        },
         // qq登录
         qq_login: function(){
             var next = get_query_string('next') || '/';

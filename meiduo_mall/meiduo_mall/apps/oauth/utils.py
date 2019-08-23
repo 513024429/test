@@ -2,6 +2,11 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadData
 from django.conf import settings
 
 from verifications import constants
+from django.conf import settings
+from urllib.parse import urlencode, parse_qs
+import json
+import requests
+
 
 
 def generate_openid_signature(openid):

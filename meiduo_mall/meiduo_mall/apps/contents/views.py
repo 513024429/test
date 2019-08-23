@@ -3,7 +3,8 @@ from django.shortcuts import render
 # Create your views here.
 from django.views.generic.base import View
 
-from goods.models import GoodsChannel,GoodsCategory
+from goods.models import GoodsChannel, GoodsCategory, ContentCategory, Content
+
 
 def get_categories():
     """返回商品类别数据"""
@@ -35,7 +36,15 @@ def get_categories():
 class IndexView(View):
     def get(self,request):
         categories = get_categories()
+        keys=ContentCategory.objects.all()
+        contents={}
+        for category in keys:
+            content=category.content_set.filter(status=True).order_by('sequence')
+            contents[category.key]=content
+
         context = {
             'categories': categories,
+            'contents':contents
         }
         return render(request, 'index.html', context)
+

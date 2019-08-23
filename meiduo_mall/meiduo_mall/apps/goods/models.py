@@ -5,7 +5,37 @@ from django.db import models
 
 from meiduo_mall.utils.models import BasModel
 
+class ContentCategory(BasModel):
+    """广告内容类别"""
+    name = models.CharField(max_length=50, verbose_name='名称')
+    key = models.CharField(max_length=50, verbose_name='类别键名')
 
+    class Meta:
+        db_table = 'tb_content_category'
+        verbose_name = '广告内容类别'
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.name
+
+
+class Content(BasModel):
+    """广告内容"""
+    category = models.ForeignKey(ContentCategory, on_delete=models.PROTECT, verbose_name='类别')
+    title = models.CharField(max_length=100, verbose_name='标题')
+    url = models.CharField(max_length=300, verbose_name='内容链接')
+    image = models.ImageField(null=True, blank=True, verbose_name='图片')
+    text = models.TextField(null=True, blank=True, verbose_name='内容')
+    sequence = models.IntegerField(verbose_name='排序')
+    status = models.BooleanField(default=True, verbose_name='是否展示')
+
+    class Meta:
+        db_table = 'tb_content'
+        verbose_name = '广告内容'
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.category.name + ': ' + self.title
 class GoodsCategory(BasModel):
     """商品类别"""
     name = models.CharField(max_length=10, verbose_name='名称')
@@ -150,6 +180,16 @@ class SpecificationOption(BasModel):
 
     def __str__(self):
         return '%s - %s' % (self.spec, self.value)
+class GoodsVisitCount(BasModel):
+    """统计分类商品访问量模型类"""
+    category = models.ForeignKey(GoodsCategory, on_delete=models.CASCADE, verbose_name='商品分类')
+    count = models.IntegerField(verbose_name='访问量', default=0)
+    date = models.DateField(auto_now_add=True, verbose_name='统计日期')
+
+    class Meta:
+        db_table = 'tb_goods_visit'
+        verbose_name = '统计分类商品访问量'
+        verbose_name_plural = verbose_name
 
 
 class SKUSpecification(BasModel):
