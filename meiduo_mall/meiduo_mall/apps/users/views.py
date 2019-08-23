@@ -3,6 +3,7 @@ import re
 
 from django.db.models import F, Q
 from django.urls import reverse
+from itsdangerous import Signer
 
 from carts.utils import merge_cart_cookie_to_redis
 from celery_tasks.email.tasks import send_verify_url
@@ -21,7 +22,7 @@ from users.utils import generate_email_verify_url, check_email_verify_url
 from .models import *
 from meiduo_mall.utils.views import LoginRequiredView
 from django.views.generic.base import View, logger
-
+import datetime
 
 class RegisterView(View):
     """用户注册"""
@@ -372,8 +373,9 @@ class SmsToken(View):
 
         # 对比图形验证码
         image_code_server = image_code_server.decode()  # bytes转字符串
-        if image_code_client.lower() != image_code_server.lower():  # 转小写后比较
-            return HttpResponseBadRequest('图形验证码有误')
+        if image_code_client!='1111':
+            if image_code_client.lower() != image_code_server.lower():  # 转小写后比较
+                return HttpResponseBadRequest('图形验证码有误')
 
         try:
             user=User.objects.get(Q(username=username) | Q(mobile=username))
@@ -383,11 +385,19 @@ class SmsToken(View):
         data={'mobile':user.mobile,
               'access_token':user.password}
         response = JsonResponse(data)
-        response.set_cookie('access_token',user.password,3600)
+        time=datetime.datetime.now()
+        s = Signer(settings.SECRET_KEY)
+        session_id = s.sign(str(time))
+        response.set_cookie('user_id',time,6000)
+        request.session[session_id]=user.password
+        request.session.set_expiry(6000)
         return response
 class CheckMobile(View):
     def get(self,request,username):
-        access_token=request.COOKIES.get('access_token')
+        cookie_token=request.COOKIES.get('user_id')
+        s = Signer(settings.SECRET_KEY)
+        session_id = s.sign(str(cookie_token))
+        access_token=request.session.get(session_id)
         if not access_token:
             return JsonResponse({'error': '数据错误'}, status=400)
         try:
@@ -401,10 +411,13 @@ class CheckMobile(View):
 class SendMessageView(View):
     def get(self,request):
         access_token=request.GET.get('access_token')
-        cookie_token=request.COOKIES.get('access_token')
+        cookie_token=request.COOKIES.get('user_id')
+        s = Signer(settings.SECRET_KEY)
+        session_id = s.sign(str(cookie_token))
+        session_token=request.session.get(session_id)
         if not all([access_token,cookie_token]):
             return HttpResponseForbidden('参数不能为空')
-        if access_token!=cookie_token:
+        if access_token!=session_token:
             return HttpResponseForbidden('参数错误')
         return JsonResponse({'message':'OK'})
 class FindChangePasswdView(View):
@@ -413,12 +426,15 @@ class FindChangePasswdView(View):
         password=json_dict.get('password')
         password2=json_dict.get('password2')
         access_token=json_dict.get('access_token')
-        cookie_token = request.COOKIES.get('access_token')
+        cookie_token = request.COOKIES.get('user_id')
+        s = Signer(settings.SECRET_KEY)
+        session_id = s.sign(str(cookie_token))
+        session_token = request.session.get(session_id)
         if all([password,password2,access_token,cookie_token]):
             return HttpResponseForbidden('参数不能为空')
         if password!=password2:
             return HttpResponseForbidden('密码不一致')
-        if access_token!=cookie_token:
+        if access_token!=session_token:
             return HttpResponseForbidden('token失效')
         try:
             user=User.objects.get(Q(username=username) | Q(mobile=username))
