@@ -342,7 +342,7 @@ class ChangePasswordView(LoginRequiredView):
         if new_password != new_password2:
             return HttpResponseForbidden('两次输入的密码不一致')
         try:
-            user.password=new_password
+            user.set_password(new_password)
             user.save()
         except Exception as e:
             logger.error(e)
@@ -421,7 +421,7 @@ class SendMessageView(View):
             return HttpResponseForbidden('参数错误')
         return JsonResponse({'message':'OK'})
 class FindChangePasswdView(View):
-    def post(self,request,username):
+    def post(self,request,user_id):
         json_dict=json.loads(request.body.decode())
         password=json_dict.get('password')
         password2=json_dict.get('password2')
@@ -430,18 +430,18 @@ class FindChangePasswdView(View):
         s = Signer(settings.SECRET_KEY)
         session_id = s.sign(str(cookie_token))
         session_token = request.session.get(session_id)
-        if all([password,password2,access_token,cookie_token]):
+        if not all([password,password2,access_token,cookie_token]):
             return HttpResponseForbidden('参数不能为空')
         if password!=password2:
             return HttpResponseForbidden('密码不一致')
         if access_token!=session_token:
             return HttpResponseForbidden('token失效')
         try:
-            user=User.objects.get(Q(username=username) | Q(mobile=username))
+            user=User.objects.get(Q(id=user_id))
         except DatabaseError:
             return HttpResponseForbidden('用户不存在')
         try:
-            user.password=password
+            user.set_password(password)
             user.save()
         except Exception:
             return HttpResponseForbidden('保存失败')

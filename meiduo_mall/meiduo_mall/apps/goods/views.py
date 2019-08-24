@@ -9,7 +9,7 @@ from django.core.urlresolvers import reverse
 
 from meiduo_mall.utils.views import LoginRequiredView
 from meiduo_mall.utils.views import get_categories
-from .utils import get_breadcrumb
+from .utils import get_breadcrumb,get_commnets
 from .models import GoodsCategory,SKU,GoodsVisitCount
 from . import constants
 from meiduo_mall.utils.response_code import RETCODE
@@ -112,7 +112,7 @@ class DetailView(View):
                 option.sku_id = spec_sku_map.get(tuple(temp_option_ids))  # 给每个选项对象绑定下他sku_id属性
 
             spec.spec_options = spec_option_qs  # 把规格下的所有选项绑定到规格对象的spec_options属性上
-
+        comments,count=get_commnets(sku_id)
         context = {
             'categories': get_categories(),  # 商品分类
             'breadcrumb': get_breadcrumb(category),  # 面包屑导航
@@ -120,6 +120,8 @@ class DetailView(View):
             'category': category,  # 当前的显示sku所属的三级类别
             'spu': spu,  # sku所属的spu
             'spec_qs': spu_spec_qs,  # 当前商品的所有规格数据
+            'comments':comments,
+            'peoples':count
         }
         return render(request, 'detail.html', context)
 class DetailVisitView(View):
@@ -183,5 +185,4 @@ class GoodsDetailView(View):
     def get(self,request,sku_id):
         url=reverse('goods:detail',args=(sku_id,))
         return redirect(url)
-
 

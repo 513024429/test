@@ -21,5 +21,5 @@ urlpatterns = [
     url(r'^accounts/(?P<username>[0-9A-Za-z-_]{5,20})/sms/token/$',views.SmsToken.as_view()),
     url(r'^accounts/(?P<username>[0-9A-Za-z-_]{5,20})/password/token/$',views.CheckMobile.as_view()),
     url(r'^sms_codes/$',views.SendMessageView.as_view()),
-    url(r'^(?P<username>[0-9A-Za-z-_]{5,20})/(?P<user_id>\d+)/password/$',views.FindChangePasswdView.as_view()),
+    url(r'^users/(?P<user_id>\d+)/password/$',views.FindChangePasswdView.as_view()),
 ]

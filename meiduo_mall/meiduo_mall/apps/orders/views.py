@@ -2,16 +2,19 @@ import json
 from decimal import Decimal
 
 from django import http
+from django.core.paginator import Paginator
 from django.db import transaction
+from django.http import HttpResponseNotFound
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.generic.base import View, logger
 from django_redis import get_redis_connection
 
+from goods import constants
 from goods.models import SKU
 from meiduo_mall.utils.response_code import RETCODE
 from meiduo_mall.utils.views import LoginRequiredView
-from orders.models import OrderInfo, OrderGoods
+from orders.models import OrderInfo, OrderGoods, SKUComment
 from users.models import Address
 
 
@@ -102,7 +105,7 @@ class OrderCommitView(LoginRequiredView):
                         )
                         order.total_amount+=sku.price*count
                         order.total_count += count
-                    break
+                        break
                 order.total_amount += order.freight
                 order.save()
 
@@ -136,12 +139,12 @@ class OrderSuccessView(LoginRequiredView):
         }
         return render(request, 'order_success.html', context)
 class OrderInfoView(LoginRequiredView):
-    def get(self,request):
+    def get(self,request,page_num):
         user=request.user
         orders=OrderInfo.objects.filter(user_id=user.id)
         for order in orders:
             orderids=OrderGoods.objects.filter(order=order)
-            order.pay_method_name=order.pay_method
+            order.pay_method_name=order.get_pay_method_display()
             order.status_name=order.get_status_display()
             order.sku_list=[]
             for orderid in orderids:
@@ -149,6 +152,66 @@ class OrderInfoView(LoginRequiredView):
                 orderid.sku.count=orderid.count
                 orderid.sku.amount=orderid.sku.price*orderid.count
                 order.sku_list.append(orderid.sku)
-        context={'page_orders':orders}
+        paginator = Paginator(orders, constants.GOODS_LIST_LIMIT)
+        total_page = paginator.num_pages
+        if int(page_num)>total_page:
+            page_num=total_page
+        try:
+            page_orders=paginator.page(page_num)
+        except Exception:
+            return HttpResponseNotFound('empty page')
+        context={'page_orders':page_orders,
+                 'page_num':page_num,
+                 'total_page':total_page}
 
         return render(request,'user_center_order.html',context)
+class OrderCommentView(LoginRequiredView):
+    def get(self,request):
+        order_id=request.GET.get('order_id')
+        sku_ids=OrderGoods.objects.filter(order_id=order_id)
+        skus=[]
+        for sku in sku_ids:
+            sku_id={'sku_id':sku.sku.id,
+                    'name':sku.sku.name,
+                    'price':str(sku.sku.price),
+                    'default_image_url':sku.sku.default_image.url,
+                    'order_id':order_id}
+            skus.append(sku_id)
+        context={'uncomment_goods_list':skus}
+        return render(request,'goods_judge.html',context)
+    def post(self,request):
+        user=request.user
+        json_dict=json.loads(request.body.decode())
+        comment=json_dict.get('comment')
+        is_anonymous=json_dict.get('is_anonymous')
+        score=json_dict.get('score')
+        sku_id=json_dict.get('sku_id')
+        order_id=json_dict.get('order_id')
+        username=user.username
+        if not all([sku_id,comment,order_id]):
+            return http.HttpResponseForbidden('参数不能为空')
+        try:
+            SKU.objects.get(id=sku_id)
+        except SKU.DoesNotExist:
+            return http.HttpResponseForbidden('商品不存在')
+        if is_anonymous:
+            is_anonymous=True
+            username='null'
+        with transaction.atomic():
+            savepoint = transaction.savepoint()
+            try:
+                SKUComment.objects.create(
+                    sku_id=sku_id,
+                    score=score,
+                    is_anonymous=is_anonymous,
+                    comment=comment,
+                    order_id=order_id,
+                    username=username
+                )
+                OrderInfo.objects.filter(order_id=order_id).update(status=5)
+                transaction.savepoint_commit(savepoint)
+            except Exception as e:
+                logger.error(e)
+                transaction.savepoint_rollback(savepoint)
+                return http.HttpResponseForbidden('评价失败')
+        return http.JsonResponse({'code':RETCODE.OK})

@@ -4,6 +4,8 @@ from django.db import models
 from django.db import models
 
 from meiduo_mall.utils.models import BasModel
+# from orders.models import OrderGoods
+
 
 class ContentCategory(BasModel):
     """广告内容类别"""
@@ -205,3 +207,5 @@ class SKUSpecification(BasModel):
 
     def __str__(self):
         return '%s: %s - %s' % (self.sku, self.spec.name, self.option.value)
+
+

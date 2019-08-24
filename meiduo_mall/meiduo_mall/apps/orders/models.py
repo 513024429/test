@@ -75,3 +75,14 @@ class OrderGoods(BasModel):
 
     def __str__(self):
         return self.sku.name
+class SKUComment(BasModel):
+    sku=models.ForeignKey(SKU, related_name='comment', on_delete=models.CASCADE, verbose_name='sku')
+    score=models.CharField(max_length=20, verbose_name='来源')
+    is_anonymous=models.BooleanField(default=True, verbose_name='是否匿名')
+    comment=models.CharField(max_length=1500, verbose_name='评价')
+    order =  models.ForeignKey(OrderInfo, related_name='CommentOrder', on_delete=models.CASCADE, verbose_name="订单",default='null')
+    username=models.CharField(max_length=1500, verbose_name='名字',default='null')
+    class Meta:
+        db_table = 'tb_sku_commnet'
+        verbose_name = 'SKU评价'
+        verbose_name_plural = verbose_name

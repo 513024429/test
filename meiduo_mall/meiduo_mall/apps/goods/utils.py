@@ -1,3 +1,6 @@
+from orders.models import SKUComment
+
+
 def get_breadcrumb(category):
     """
     面包屑导航
@@ -14,3 +17,21 @@ def get_breadcrumb(category):
     }
 
     return breadcrumb
+def get_commnets(sku_id):
+    skucomments=SKUComment.objects.filter(sku_id=sku_id)
+    if len(skucomments)<1:
+        return ([], 0)
+    count=skucomments.count()
+    comments=[]
+    for skucomment in skucomments:
+        username=skucomment.username
+        if username=='null':
+            username='匿名用户'
+        else:
+            username=username[0]+'****'+username[-1]
+        commnet={
+            'username':username,
+            'desc':skucomment.comment
+        }
+        comments.append(commnet)
+    return (comments,count)
