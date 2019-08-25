@@ -1,5 +1,6 @@
 import json
 import re
+import random
 
 from django.db.models import F, Q
 from django.urls import reverse
@@ -389,7 +390,9 @@ class SmsToken(View):
         s = Signer(settings.SECRET_KEY)
         session_id = s.sign(str(time))
         response.set_cookie('user_id',time,6000)
-        request.session[session_id]=user.password
+        number=random.randint(100000,999999)
+        secrity=s.sign(str(number)).decode()
+        request.session[session_id]=secrity
         request.session.set_expiry(6000)
         return response
 class CheckMobile(View):
