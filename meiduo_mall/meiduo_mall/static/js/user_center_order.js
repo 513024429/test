@@ -6,7 +6,6 @@ var vm = new Vue({
         host: host,
     },
     mounted(){
-
     },
     methods: {
         oper_btn_click(order_id, status){

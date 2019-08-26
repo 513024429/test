@@ -9,6 +9,11 @@ var vm = new Vue({
     mounted: function(){
         // 渲染评价界面
         this.render_comments();
+        if (window.history && window.history.pushState) {
+        history.pushState(null, null, document.URL);
+        window.addEventListener('popstate', this.cancel, false);
+
+  }
     },
     methods: {
         // 渲染评价界面
@@ -23,6 +28,12 @@ var vm = new Vue({
                 Vue.set(this.skus[i], 'is_anonymous', false);
             }
         },
+        destroyed(){
+              window.removeEventListener('popstate', this.cancel, false);
+          },
+        cancel() {
+                window.location.reload();
+                },
         // 鼠标在评分星星上滑动
         on_stars_mouseover(index, score){
             this.skus[index].score = score;

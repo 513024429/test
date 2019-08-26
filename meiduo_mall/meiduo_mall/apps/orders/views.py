@@ -5,7 +5,7 @@ from django import http
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import HttpResponseNotFound
-from django.shortcuts import render
+from django.shortcuts import render,redirect
 from django.utils import timezone
 from django.views.generic.base import View, logger
 from django_redis import get_redis_connection
@@ -168,6 +168,10 @@ class OrderInfoView(LoginRequiredView):
 class OrderCommentView(LoginRequiredView):
     def get(self,request):
         order_id=request.GET.get('order_id')
+        try:
+            OrderInfo.objects.get(order_id=order_id,user_id=request.user.id,status=4)
+        except Exception:
+            return redirect('/orders/info/%s' %request.user.id)
         sku_ids=OrderGoods.objects.filter(order_id=order_id)
         skus=[]
         for sku in sku_ids:
