@@ -10,7 +10,6 @@ class OAuthWB:
         self.state = state
         self.client_key=client_secret
     def get_weibo_url(self):
-        # QQ登录url参数组建
         data_dict = {
             'response_type': 'code',
             'client_id': self.client_id,
